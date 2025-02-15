@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viivakoodin lukija</title>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.3/umd/index.min.js"></script>  <!-- ZXing - viivakoodin lukija -->
+</head>
+<body>
+  <h1>Viivakoodin lukija</h1>
+  <video id="camera" width="100%" height="100%" style="border:1px solid black"></video>
+  <p id="barcode">Luettu viivakoodi: Ei ole luettu</p>
+  <button onclick="startScanner()">Aloita skannaus</button>
+
+  <script>
+    let codeReader = new ZXing.BrowserMultiFormatReader();
+    let camera = document.getElementById('camera');
+    let barcodeText = document.getElementById('barcode');
+
+    function startScanner() {
+      codeReader.getVideoInputDevices()
+        .then((videoInputDevices) => {
+          const selectedDeviceId = videoInputDevices[0].deviceId;  // valitaan ensimmäinen kamera
+          codeReader.decodeFromVideoDevice(selectedDeviceId, camera, (result, error) => {
+            if (result) {
+              barcodeText.textContent = 'Luettu viivakoodi: ' + result.text;
+              saveToSheet(result.text);  // Tallenna viivakoodi Google Sheetiin
+            }
+            if (error) {
+              console.error(error);
+            }
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
+
+    function saveToSheet(barcode) {
+      // Täällä voimme lisätä koodin Google Sheetsin tallentamiseen
+      console.log("Tallennetaan viivakoodi: " + barcode);
+      // Tämä vaihe käsitellään myöhemmin Google Sheets API:n avulla
+    }
+  </script>
+</body>
+</html>
