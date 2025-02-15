@@ -5,25 +5,82 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Viivakoodin lukija</title>
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.3/umd/index.min.js"></script>  <!-- ZXing - viivakoodin lukija -->
+  <style>
+    /* Logo */
+    #logo {
+      display: block;
+      margin: 20px auto;
+      width: 200px;
+    }
+
+    /* Pop-up tyyli */
+    #popup {
+      display: none;
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: white;
+      padding: 20px;
+      border: 2px solid #000;
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      z-index: 999;
+    }
+
+    /* OK-painike */
+    #popup button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #popup button:hover {
+      background-color: #45a049;
+    }
+  </style>
 </head>
 <body>
+  <!-- Logo -->
+  <img id="logo" src="https://pilkkosetkauppa.fi/cdn/shop/files/logo.svg?v=1714025560&width=350" alt="Logo">
+
   <h1>Viivakoodin lukija</h1>
   <video id="camera" width="100%" height="100%" style="border:1px solid black"></video>
   <p id="barcode">Luettu viivakoodi: Ei ole luettu</p>
   <button onclick="startScanner()">Aloita skannaus</button>
 
+  <!-- Pop-up viivakoodin lukemisen jälkeen -->
+  <div id="popup">
+    <h2>Tuotteen luku onnistui!</h2>
+    <p>Viivakoodi: <span id="scannedCode"></span></p>
+    <button onclick="closePopup()">OK</button>
+  </div>
+
   <script>
     let codeReader = new ZXing.BrowserMultiFormatReader();
     let camera = document.getElementById('camera');
     let barcodeText = document.getElementById('barcode');
+    let popup = document.getElementById('popup');
+    let scannedCode = document.getElementById('scannedCode');
 
     function startScanner() {
       codeReader.getVideoInputDevices()
         .then((videoInputDevices) => {
-          const selectedDeviceId = videoInputDevices[0].deviceId;  // valitaan ensimmäinen kamera
+          const selectedDeviceId = videoInputDevices[0].deviceId;  // Valitaan ensimmäinen kamera
           codeReader.decodeFromVideoDevice(selectedDeviceId, camera, (result, error) => {
             if (result) {
               barcodeText.textContent = 'Luettu viivakoodi: ' + result.text;
+              scannedCode.textContent = result.text;
+              
+              // Soitetaan "tada" ääni
+              let audio = new Audio('https://www.soundjay.com/button/tada-01.wav'); // Positiivinen onnistumisääni
+              audio.play();
+
+              // Näytetään pop-up, kun viivakoodi on luettu onnistuneesti
+              popup.style.display = 'block';
+
               saveToSheet(result.text);  // Tallenna viivakoodi Google Sheetiin
             }
             if (error) {
@@ -33,13 +90,18 @@
         })
         .catch((err) => {
           console.error(err);
+          alert("Virhe kameran käytössä. Tarkista asetukset.");
         });
     }
 
     function saveToSheet(barcode) {
-      // Täällä voimme lisätä koodin Google Sheetsin tallentamiseen
+      // Tämä osa voidaan lisätä myöhemmin Google Sheets API:lla
       console.log("Tallennetaan viivakoodi: " + barcode);
-      // Tämä vaihe käsitellään myöhemmin Google Sheets API:n avulla
+    }
+
+    function closePopup() {
+      // Suljetaan pop-up
+      popup.style.display = 'none';
     }
   </script>
 </body>
