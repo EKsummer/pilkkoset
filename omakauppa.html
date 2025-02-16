@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PilkkosetOmaMyynti</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.3/umd/index.min.js"></script>
+  <style>
+    /* Yleiset tyylit */
+    body {
+      background-color: #f4f4f9;
+      font-family: 'Figtree', sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    h1 {
+      color: #f57c00;
+      font-size: 2rem;
+      margin-top: 30px;
+    }
+
+    /* Logo */
+    #logo {
+      display: block;
+      margin: 20px auto;
+      width: 220px;
+    }
+
+    /* Kameran alue */
+    #camera {
+      width: 90%;
+      max-width: 600px;
+      height: auto;
+      border: 4px solid #f57c00;
+      border-radius: 15px;
+      margin: 20px auto;
+      display: block;
+    }
+
+    /* Painikkeet */
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 200px; /* Tee painikkeista saman kokoisia */
+      margin: 10px 0;
+    }
+
+    /* "Skannaa koodi" -painike */
+    button#scanButton {
+      background-color: #4CAF50; /* Vihreä */
+      color: white;
+    }
+
+    button#scanButton:hover {
+      background-color: #45a049;
+    }
+
+    /* "Jatka skannaamista" painike */
+    #popup .continue {
+      background-color: transparent; /* Poistetaan täyttöväri */
+      border: 2px solid #4CAF50;
+      color: #4CAF50;
+      font-size: 14px;
+    }
+
+    #popup .continue:hover {
+      background-color: #f1f1f1;
+    }
+
+    /* "Valmis" painike */
+    #popup .done {
+      background-color: #4CAF50; /* Vihreä tausta */
+      color: white;
+    }
+
+    #popup .done:hover {
+      background-color: #388e3c;
+    }
+
+    /* Pop-up tyyli */
+    #popup {
+      display: none;
+      position: fixed;
+      top: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      z-index: 999;
+      width: 300px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    #popup h2 {
+      color: #4CAF50;
+      margin-bottom: 20px;
+    }
+
+    #popup p {
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+    }
+
+    /* Määräkenttä */
+    input[type="number"] {
+      padding: 10px;
+      font-size: 1.5rem;
+      width: 50%;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 2px solid #f57c00;
+      text-align: center;
+    }
+
+    .content-container {
+      margin: 0 auto;
+      max-width: 800px;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="content-container">
+    <!-- Logo -->
+    <img id="logo" src="https://pilkkosetkauppa.fi/cdn/shop/files/logo.svg?v=1714025560&width=350" alt="Logo">
+
+    <h1>PilkkosetOmaMyynti</h1>
+
+    <!-- Kameran alue -->
+    <video id="camera"></video>
+    <p id="barcode">Aloita klikkaamalla Skannaa koodi</p>
+
+    <button id="scanButton" onclick="startScanner()">Skannaa koodi</button> <!-- Skannaa koodi painike -->
+
+    <!-- Pop-up viivakoodin lukemisen jälkeen -->
+    <div id="popup">
+      <h2>Tuotteen luku onnistui!</h2>
+      <p>Viivakoodi: <span id="scannedCode"></span></p>
+      <label for="quantity">Syötä määrä:</label>
+      <input type="number" id="quantity" min="-9" max="9" step="1" value="1">
+      <button class="continue" onclick="continueScanning()">Jatka skannaamista</button>
+      <button class="done" onclick="stopScanning()">Valmis</button>
+    </div>
+  </div>
+
+  <script>
+    let codeReader = new ZXing.BrowserMultiFormatReader();
+    let camera = document.getElementById('camera');
+    let barcodeText = document.getElementById('barcode');
+    let popup = document.getElementById('popup');
+    let scannedCode = document.getElementById('scannedCode');
+    let quantityInput = document.getElementById('quantity');
+    let scanningActive = false; // Muuttuja, joka seuraa onko skannaus aktiivinen
+
+    const zapierUrl = 'https://hooks.zapier.com/hooks/catch/21723854/2w9piin/'; // Zapier Webhook URL
+
+    function startScanner() {
+      if (!scanningActive) {
+        scanningActive = true;
+        // Piilotetaan "Skannaa koodi" painike ja näytetään uusi teksti
+        document.getElementById("scanButton").style.display = "none";  // Piilotetaan painike
+        barcodeText.textContent = 'Lue tuotteen viivakoodi';  // Muutetaan teksti
+
+        codeReader.getVideoInputDevices()
+          .then((videoInputDevices) => {
+            const selectedDeviceId = videoInputDevices[0].deviceId;  // Valitaan ensimmäinen kamera
+            codeReader.decodeFromVideoDevice(selectedDeviceId, camera, (result, error) => {
+              if (result) {
+                barcodeText.textContent = 'Luettu viivakoodi: ' + result.text;
+                scannedCode.textContent = result.text;
+                
+                // Soitetaan "tada" ääni
+                let audio = new Audio('https://www.soundjay.com/button/tada-01.wav');
+                audio.play();
+
+                // Näytetään pop-up, kun viivakoodi on luettu onnistuneesti
+                popup.style.display = 'block';
+
+                saveToSheet(result.text);  // Tallenna viivakoodi Zapierille
+              }
+              if (error) {
+                console.error(error);
+              }
+            });
+          })
+          .catch((err) => {
+            console.error(err);
+            alert("Virhe kameran käytössä. Tarkista asetukset.");
+          });
+      }
+    }
+
+    function saveToSheet(barcode) {
+      let quantity = quantityInput.value;
+      if (!quantity) {
+        quantity = 1;
+      } else if (!Number.isInteger(Number(quantity)) || Number(quantity) < -9 || Number(quantity) > 9) {
+        alert("Syötä määrä kokonaislukuna -9 ja 9 välillä!");
+        return;
+      }
+
+      const now = new Date();
+      const timestamp = now.toISOString();
+
+      const data = {
+        kellonaika: timestamp,
+        viivakoodi: barcode,
+        maara: quantity
+      };
+
+      fetch(zapierUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Data lähetetty Zapierille:', data);
+      })
+      .catch((error) => {
+        console.error('Virhe lähetyksessä Zapierille:', error);
+      });
+    }
+
+    function continueScanning() {
+      popup.style.display = 'none';
+      scanningActive = true;
+      startScanner();
+    }
+
+    function stopScanning() {
+      popup.style.display = 'none';
+      scanningActive = false;
+      barcodeText.textContent = 'Aloita klikkaamalla Skannaa koodi';
+      camera.srcObject = null; // Poistetaan kameran syöte
+      document.getElementById("scanButton").style.display = "inline-block";  // Näytetään painike uudelleen
+    }
+  </script>
+</body>
+</html>
